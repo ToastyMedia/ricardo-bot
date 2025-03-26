@@ -1,42 +1,32 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import TelegramBot from 'node-telegram-bot-api';
-import fetch from 'node-fetch';
 
-// 🔁 REPLACE THIS with your actual bot token
-const TELEGRAM_TOKEN = 'PASTE_YOUR_BOT_TOKEN_HERE';
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
-// 🔁 Identify which client's config this bot should use
-const CLIENT_ID = 'ricardo';
+const bot = new TelegramBot(TELEGRAM_TOKEN);
+bot.setWebHook(WEBHOOK_URL);
 
-// Supabase setup
-const SUPABASE_URL = `https://rgsnykswshlltmbynpzn.supabase.co/rest/v1/configs?client_id=eq.${CLIENT_ID}`;
-const SUPABASE_HEADERS = {
-  apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnc255a3N3c2hsbHRtYnlucHpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDk0NjgsImV4cCI6MjA1ODI4NTQ2OH0.mnLfo8RtOeh5BZDdlE_ayKO_SadDLRIJuK_1fvNxeNo',
-  Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnc255a3N3c2hsbHRtYnlucHpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDk0NjgsImV4cCI6MjA1ODI4NTQ2OH0.mnLfo8RtOeh5BZDdlE_ayKO_SadDLRIJuK_1fvNxeNo`,
-};
-
-// Initialize bot
-const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
-
-// Triggered when user types /start
-bot.onText(/\/start/, async (msg) => {
+// When bot is added to a group chat, introduce itself automatically
+bot.on('new_chat_members', (msg) => {
   const chatId = msg.chat.id;
-  const username = msg.from.username;
+  const newMembers = msg.new_chat_members;
 
-  try {
-    const configRes = await fetch(SUPABASE_URL, { headers: SUPABASE_HEADERS });
-    const configData = await configRes.json();
-    const messages = configData[0]?.settings?.messages;
-
-    if (!messages) {
-      bot.sendMessage(chatId, 'No config found for this client.');
-      return;
+  newMembers.forEach(member => {
+    if (member.username === bot.me.username) {
+      bot.sendMessage(chatId, "Hey everyone! I'm Ricardo's assistant bot, here to help keep conversations and details organized.");
     }
+  });
+});
 
-    const intro = messages.intro || `Hey ${username}, nice to meet you!`;
-    bot.sendMessage(chatId, intro);
+// Basic message logging (for now, just outputs to the console)
+bot.on('message', (msg) => {
+  const username = msg.from.username;
+  const text = msg.text;
 
-  } catch (err) {
-    bot.sendMessage(chatId, 'Error pulling your config. Try again later.');
-    console.error(err);
-  }
+  console.log(`Message from ${username}: ${text}`);
+
+  // Future logic: save important info to Supabase/database here
 });
